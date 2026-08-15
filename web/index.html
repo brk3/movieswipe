@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <title>movieswipe</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app">
+    <section id="view-onboarding" class="view">
+      <div class="onboarding-card">
+        <h1>movieswipe</h1>
+        <p class="tagline">Swipe. Match. Watch.</p>
+
+        <div id="step-name" class="onboarding-step">
+          <label for="input-name">Your name</label>
+          <input id="input-name" type="text" placeholder="e.g. Alex" autocomplete="name" maxlength="30">
+          <button id="btn-continue-name" class="btn btn-primary" disabled>Continue</button>
+        </div>
+
+        <div id="step-choice" class="onboarding-step hidden">
+          <button id="btn-show-create" class="btn btn-primary">Create a room</button>
+          <button id="btn-show-join" class="btn btn-secondary">Enter a code</button>
+        </div>
+
+        <div id="step-create" class="onboarding-step hidden">
+          <label for="input-room-name">Room name (optional)</label>
+          <input id="input-room-name" type="text" placeholder="Friday night" maxlength="40">
+          <button id="btn-create" class="btn btn-primary">Create room</button>
+          <button class="btn btn-link" data-back="step-choice">Back</button>
+        </div>
+
+        <div id="step-join" class="onboarding-step hidden">
+          <label for="input-code">Room code</label>
+          <input id="input-code" type="text" placeholder="ABC123" maxlength="6" autocapitalize="characters">
+          <button id="btn-join" class="btn btn-primary">Join room</button>
+          <button class="btn btn-link" data-back="step-choice">Back</button>
+        </div>
+
+        <p id="onboarding-error" class="error hidden"></p>
+      </div>
+    </section>
+
+    <main id="view-app" class="view hidden">
+      <section id="view-swipe" class="tab-panel">
+        <div id="swipe-banner" class="swipe-banner hidden"></div>
+        <div id="card-stack" class="card-stack">
+          <div id="empty-state" class="empty-state hidden">
+            <p>No more movies right now.</p>
+            <p class="empty-sub">More will load automatically, or try widening your filters in the Room tab.</p>
+          </div>
+        </div>
+        <div class="swipe-controls">
+          <button id="btn-undo" class="btn-round btn-undo" title="Undo" disabled>&#8630;</button>
+          <button id="btn-pass" class="btn-round btn-pass" title="Pass">&times;</button>
+          <button id="btn-like" class="btn-round btn-like" title="Like">&hearts;</button>
+        </div>
+      </section>
+
+      <section id="view-lists" class="tab-panel hidden">
+        <h2>Matches</h2>
+        <div id="matches-list" class="movie-list"></div>
+        <div id="members-lists"></div>
+      </section>
+
+      <section id="view-room" class="tab-panel hidden">
+        <h2 id="room-name-display">Room</h2>
+        <div class="room-code-box">
+          <span id="room-code-display"></span>
+          <button id="btn-share" class="btn btn-secondary">Share</button>
+        </div>
+
+        <h3>Filters</h3>
+        <div class="filter-editor">
+          <div class="filter-row">
+            <label>Year</label>
+            <div class="filter-year-range">
+              <input id="filter-year-from" type="number" placeholder="From" min="1900" max="2100">
+              <span>–</span>
+              <input id="filter-year-to" type="number" placeholder="To" min="1900" max="2100">
+            </div>
+          </div>
+          <div class="filter-row">
+            <label>Genres</label>
+            <div id="filter-genre-chips" class="genre-chips filter-genre-chips"></div>
+          </div>
+          <div class="filter-row">
+            <label for="filter-min-rating">Minimum rating</label>
+            <input id="filter-min-rating" type="number" step="0.5" min="0" max="10">
+          </div>
+          <div class="filter-row">
+            <label for="filter-min-votes">Minimum votes</label>
+            <input id="filter-min-votes" type="number" min="0" step="50">
+          </div>
+          <button id="btn-save-filters" class="btn btn-primary">Save filters</button>
+          <p id="filters-saved" class="filters-saved hidden">Saved — deck refreshed.</p>
+        </div>
+
+        <h3>Members</h3>
+        <ul id="room-members-list"></ul>
+      </section>
+
+      <nav id="tab-bar" class="tab-bar">
+        <button class="tab-btn active" data-tab="swipe">Swipe</button>
+        <button class="tab-btn" data-tab="lists">Lists<span id="lists-badge" class="badge hidden">0</span></button>
+        <button class="tab-btn" data-tab="room">Room</button>
+      </nav>
+    </main>
+
+    <div id="trailer-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <button id="btn-close-trailer" class="modal-close">&times;</button>
+        <div class="modal-video">
+          <iframe id="trailer-frame" src="" title="Trailer" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
