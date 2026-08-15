@@ -7,6 +7,7 @@ import (
 )
 
 type memberLikesDTO struct {
+	ID    int64     `json:"id"`
 	Name  string    `json:"name"`
 	Likes []cardDTO `json:"likes"`
 }
@@ -33,7 +34,7 @@ func handleLists(st *store.Store, genresByID map[int]string) http.HandlerFunc {
 				writeError(w, http.StatusInternalServerError, "could not load likes")
 				return
 			}
-			resp.Members[i] = memberLikesDTO{Name: m.Name, Likes: cardsFromMovies(likes, genresByID)}
+			resp.Members[i] = memberLikesDTO{ID: m.ID, Name: m.Name, Likes: cardsFromMovies(likes, genresByID)}
 		}
 
 		matches, err := st.Matches(r.Context(), mc.Room.ID)

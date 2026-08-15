@@ -18,6 +18,7 @@ type roomView struct {
 	Filters       json.RawMessage `json:"filters"`
 	Members       []memberDTO     `json:"members"`
 	UnseenMatches int             `json:"unseen_matches"`
+	YouID         int64           `json:"you_id"`
 }
 
 func buildRoomView(st *store.Store, r *http.Request, room *store.Room, viewer *store.Member) (*roomView, error) {
@@ -45,6 +46,7 @@ func buildRoomView(st *store.Store, r *http.Request, room *store.Room, viewer *s
 		Filters:       json.RawMessage(room.Filters),
 		Members:       dtos,
 		UnseenMatches: unseen,
+		YouID:         viewer.ID,
 	}, nil
 }
 

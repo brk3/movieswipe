@@ -6,6 +6,7 @@
     token: null,
     code: null,
     displayName: '',
+    memberID: null,
     joinCode: null,
     room: null,
     buffer: [],
@@ -153,6 +154,7 @@
 
   function enterApp(room) {
     state.room = room;
+    state.memberID = room.you_id;
     hide('view-onboarding');
     show('view-app');
     renderRoom(room);
@@ -477,7 +479,7 @@
       section.appendChild(h);
       const list = document.createElement('div');
       list.className = 'movie-list';
-      const isMine = member.name === state.displayName;
+      const isMine = member.id === state.memberID;
       (member.likes || []).forEach((m) => list.appendChild(buildListItem(m, isMine)));
       section.appendChild(list);
       membersEl.appendChild(section);
