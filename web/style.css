@@ -377,6 +377,31 @@ input[type="text"]:focus {
   border-radius: 6px;
 }
 
+.list-item-title {
+  flex: 1;
+}
+
+.btn-remove-like {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.btn-remove-like:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn-remove-like:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .member-list-section h3 {
   color: var(--text-dim);
   font-size: 0.9rem;

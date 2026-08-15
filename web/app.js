@@ -477,13 +477,14 @@
       section.appendChild(h);
       const list = document.createElement('div');
       list.className = 'movie-list';
-      (member.likes || []).forEach((m) => list.appendChild(buildListItem(m)));
+      const isMine = member.name === state.displayName;
+      (member.likes || []).forEach((m) => list.appendChild(buildListItem(m, isMine)));
       section.appendChild(list);
       membersEl.appendChild(section);
     });
   }
 
-  function buildListItem(movie) {
+  function buildListItem(movie, removable) {
     const item = document.createElement('div');
     item.className = 'list-item';
     if (movie.poster_path) {
@@ -493,8 +494,28 @@
       item.appendChild(img);
     }
     const title = document.createElement('span');
+    title.className = 'list-item-title';
     title.textContent = movie.title + (movie.year ? ` (${movie.year})` : '');
     item.appendChild(title);
+
+    if (removable) {
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove-like';
+      removeBtn.type = 'button';
+      removeBtn.setAttribute('aria-label', `Remove ${movie.title} from your likes`);
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', async () => {
+        removeBtn.disabled = true;
+        try {
+          await api(`/rooms/${state.code}/swipes/${movie.tmdb_id}`, { method: 'DELETE' });
+          item.remove();
+        } catch (e) {
+          removeBtn.disabled = false;
+        }
+      });
+      item.appendChild(removeBtn);
+    }
+
     return item;
   }
 
