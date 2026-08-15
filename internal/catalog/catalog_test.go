@@ -123,7 +123,7 @@ func TestEnsureCardsExcludesSwiped(t *testing.T) {
 	if err := cat.EnsureCards(ctx, room, member.ID, 3); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.RecordSwipe(ctx, room.ID, member.ID, 1, true); err != nil {
+	if _, err := st.RecordSwipe(ctx, room.ID, member.ID, 1, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -138,5 +138,69 @@ func TestEnsureCardsExcludesSwiped(t *testing.T) {
 		if c.TmdbID == 1 {
 			t.Fatal("swiped movie should not be in cards")
 		}
+	}
+}
+
+func TestEnsureCardsAppliesDefaultMinVotes(t *testing.T) {
+	ctx := context.Background()
+	st := newTestStore(t)
+
+	var gotMinVotes string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMinVotes = r.URL.Query().Get("vote_count.gte")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(discoverPage(1, 1, 2, 3)))
+	}))
+	defer srv.Close()
+
+	tmdbClient := tmdb.NewWithBaseURL("test-token", srv.URL)
+	cat := New(tmdbClient, nil, st)
+
+	room, err := st.CreateRoom(ctx, "test", `{}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	member, err := st.JoinRoom(ctx, room.ID, "Alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cat.EnsureCards(ctx, room, member.ID, 3); err != nil {
+		t.Fatal(err)
+	}
+	if gotMinVotes != "50" {
+		t.Fatalf("vote_count.gte = %q, want %q", gotMinVotes, "50")
+	}
+}
+
+func TestEnsureCardsPreservesExplicitMinVotes(t *testing.T) {
+	ctx := context.Background()
+	st := newTestStore(t)
+
+	var gotMinVotes string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMinVotes = r.URL.Query().Get("vote_count.gte")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(discoverPage(1, 1, 2, 3)))
+	}))
+	defer srv.Close()
+
+	tmdbClient := tmdb.NewWithBaseURL("test-token", srv.URL)
+	cat := New(tmdbClient, nil, st)
+
+	room, err := st.CreateRoom(ctx, "test", `{"min_votes": 200}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	member, err := st.JoinRoom(ctx, room.ID, "Alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cat.EnsureCards(ctx, room, member.ID, 3); err != nil {
+		t.Fatal(err)
+	}
+	if gotMinVotes != "200" {
+		t.Fatalf("vote_count.gte = %q, want %q", gotMinVotes, "200")
 	}
 }

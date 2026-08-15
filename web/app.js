@@ -259,7 +259,8 @@
 
     if (movie.overview) {
       const overview = document.createElement('p');
-      overview.className = 'card-overview';
+      const isLong = movie.overview.length > 320;
+      overview.className = isLong ? 'card-overview clamped' : 'card-overview';
       overview.textContent = movie.overview;
       overview.addEventListener('pointerdown', (e) => e.stopPropagation());
       overview.addEventListener('click', (e) => {
@@ -377,6 +378,19 @@
     cardEl.addEventListener('pointercancel', endDrag);
   }
 
+  function submitSwipe(tmdbId, liked, attempt) {
+    attempt = attempt || 0;
+    api(`/rooms/${state.code}/swipes`, {
+      method: 'POST',
+      keepalive: true,
+      body: JSON.stringify({ tmdb_id: tmdbId, liked: liked }),
+    }).catch(() => {
+      if (attempt < 2) {
+        setTimeout(() => submitSwipe(tmdbId, liked, attempt + 1), 300 * Math.pow(2, attempt));
+      }
+    });
+  }
+
   function commitSwipe(cardEl, movie, liked, dy) {
     const flyX = (liked ? 1 : -1) * window.innerWidth * 1.2;
     cardEl.style.transition = 'transform 0.3s ease-out';
@@ -388,10 +402,7 @@
     state.buffer.shift();
     $('btn-undo').disabled = false;
 
-    api(`/rooms/${state.code}/swipes`, {
-      method: 'POST',
-      body: JSON.stringify({ tmdb_id: movie.tmdb_id, liked: liked }),
-    }).catch(() => {});
+    submitSwipe(movie.tmdb_id, liked);
 
     renderStack();
     maybeRefill();

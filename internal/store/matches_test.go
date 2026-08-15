@@ -28,19 +28,27 @@ func TestMatches(t *testing.T) {
 		}
 	}
 
-	if err := s.RecordSwipe(ctx, room.ID, alice.ID, 1, true); err != nil {
+	completed, err := s.RecordSwipe(ctx, room.ID, alice.ID, 1, true)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RecordSwipe(ctx, room.ID, bob.ID, 1, true); err != nil {
+	if completed {
+		t.Fatal("completed = true, want false before bob has swiped")
+	}
+	completed, err = s.RecordSwipe(ctx, room.ID, bob.ID, 1, true)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RecordSwipe(ctx, room.ID, alice.ID, 2, true); err != nil {
+	if !completed {
+		t.Fatal("completed = false, want true once both members liked movie 1")
+	}
+	if _, err := s.RecordSwipe(ctx, room.ID, alice.ID, 2, true); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RecordSwipe(ctx, room.ID, bob.ID, 2, false); err != nil {
+	if _, err := s.RecordSwipe(ctx, room.ID, bob.ID, 2, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RecordSwipe(ctx, room.ID, alice.ID, 3, true); err != nil {
+	if _, err := s.RecordSwipe(ctx, room.ID, alice.ID, 3, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -84,7 +92,7 @@ func TestMatchesSoloRoomYieldsNothing(t *testing.T) {
 	if err := s.UpsertMovieBasic(ctx, Movie{TmdbID: 1, Title: "Movie"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RecordSwipe(ctx, room.ID, alice.ID, 1, true); err != nil {
+	if _, err := s.RecordSwipe(ctx, room.ID, alice.ID, 1, true); err != nil {
 		t.Fatal(err)
 	}
 

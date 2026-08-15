@@ -229,6 +229,59 @@ func (s *Store) StampMatchesSeen(ctx context.Context, memberID int64) error {
 	return err
 }
 
+type PushSubscription struct {
+	MemberID   int64
+	MemberName string
+	Endpoint   string
+	P256dh     string
+	Auth       string
+}
+
+func (s *Store) SavePushSubscription(ctx context.Context, memberID int64, endpoint, p256dh, auth string) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO push_subscriptions (member_id, endpoint, p256dh, auth, created_at) VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT(endpoint) DO UPDATE SET member_id = excluded.member_id, p256dh = excluded.p256dh, auth = excluded.auth`,
+		memberID, endpoint, p256dh, auth, time.Now().Unix())
+	return err
+}
+
+func (s *Store) DeletePushSubscription(ctx context.Context, memberID int64, endpoint string) error {
+	_, err := s.db.ExecContext(ctx,
+		`DELETE FROM push_subscriptions WHERE member_id = ? AND endpoint = ?`, memberID, endpoint)
+	return err
+}
+
+func (s *Store) DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM push_subscriptions WHERE endpoint = ?`, endpoint)
+	return err
+}
+
+// PushSubscriptionsForRoomExcept returns push subscriptions for every member
+// of the room other than memberID, e.g. to notify roommates that the given
+// member just completed a match.
+func (s *Store) PushSubscriptionsForRoomExcept(ctx context.Context, roomID, memberID int64) ([]PushSubscription, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT ps.member_id, m.name, ps.endpoint, ps.p256dh, ps.auth
+		FROM push_subscriptions ps
+		JOIN members m ON m.id = ps.member_id
+		WHERE m.room_id = ? AND ps.member_id != ?`,
+		roomID, memberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var subs []PushSubscription
+	for rows.Next() {
+		var sub PushSubscription
+		if err := rows.Scan(&sub.MemberID, &sub.MemberName, &sub.Endpoint, &sub.P256dh, &sub.Auth); err != nil {
+			return nil, err
+		}
+		subs = append(subs, sub)
+	}
+	return subs, rows.Err()
+}
+
 type Movie struct {
 	TmdbID     int64
 	Title      string
@@ -355,12 +408,42 @@ func (s *Store) CardsForMember(ctx context.Context, roomID, memberID int64, limi
 	return movies, rows.Err()
 }
 
-func (s *Store) RecordSwipe(ctx context.Context, roomID, memberID, tmdbID int64, liked bool) error {
-	_, err := s.db.ExecContext(ctx, `
+// RecordSwipe records a member's swipe and reports whether it just completed
+// a new match, i.e. this is the swipe that made every member in the room
+// like the movie.
+func (s *Store) RecordSwipe(ctx context.Context, roomID, memberID, tmdbID int64, liked bool) (bool, error) {
+	var wasLiked bool
+	err := s.db.QueryRowContext(ctx,
+		`SELECT liked FROM swipes WHERE member_id = ? AND tmdb_id = ?`, memberID, tmdbID,
+	).Scan(&wasLiked)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	if _, err := s.db.ExecContext(ctx, `
 		INSERT INTO swipes (member_id, room_id, tmdb_id, liked, created_at) VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT(member_id, tmdb_id) DO UPDATE SET liked = excluded.liked, created_at = excluded.created_at`,
-		memberID, roomID, tmdbID, liked, time.Now().Unix())
-	return err
+		memberID, roomID, tmdbID, liked, time.Now().Unix(),
+	); err != nil {
+		return false, err
+	}
+
+	if !liked || wasLiked {
+		return false, nil
+	}
+
+	var memberCount, likeCount int
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM members WHERE room_id = ?`, roomID,
+	).Scan(&memberCount); err != nil {
+		return false, err
+	}
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM swipes WHERE room_id = ? AND tmdb_id = ? AND liked = 1`, roomID, tmdbID,
+	).Scan(&likeCount); err != nil {
+		return false, err
+	}
+	return memberCount > 1 && likeCount == memberCount, nil
 }
 
 func (s *Store) DeleteSwipe(ctx context.Context, memberID, tmdbID int64) error {

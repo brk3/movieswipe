@@ -14,6 +14,7 @@ import (
 
 const maxTmdbPage = 500
 const enrichWorkers = 5
+const defaultMinVotes = 50
 
 type Filters struct {
 	YearFrom  int     `json:"year_from,omitempty"`
@@ -59,13 +60,18 @@ func (c *Catalog) EnsureCards(ctx context.Context, room *store.Room, memberID in
 			break
 		}
 
+		minVotes := filters.MinVotes
+		if minVotes <= 0 {
+			minVotes = defaultMinVotes
+		}
+
 		results, totalPages, err := c.tmdb.Discover(ctx, tmdb.DiscoverFilters{
 			Page:      page,
 			YearFrom:  filters.YearFrom,
 			YearTo:    filters.YearTo,
 			GenreIDs:  filters.GenreIDs,
 			MinRating: filters.MinRating,
-			MinVotes:  filters.MinVotes,
+			MinVotes:  minVotes,
 		})
 		if err != nil {
 			return err

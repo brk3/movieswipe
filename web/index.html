@@ -95,7 +95,7 @@
           </div>
           <div class="filter-row">
             <label for="filter-min-votes">Minimum votes</label>
-            <input id="filter-min-votes" type="number" min="0" step="50">
+            <input id="filter-min-votes" type="number" min="0" step="50" placeholder="50 (default)">
           </div>
           <button id="btn-save-filters" class="btn btn-primary">Save filters</button>
           <p id="filters-saved" class="filters-saved hidden">Saved — deck refreshed.</p>
@@ -103,6 +103,12 @@
 
         <h3>Members</h3>
         <ul id="room-members-list"></ul>
+
+        <h3>Notifications</h3>
+        <div class="notify-box">
+          <p id="notify-status" class="notify-status">Get a push notification the moment you match.</p>
+          <button id="btn-enable-notify" class="btn btn-secondary hidden">Enable notifications</button>
+        </div>
 
         <button id="btn-leave-room" class="btn btn-link btn-leave-room">Leave room</button>
       </section>

@@ -44,3 +44,13 @@ CREATE TABLE IF NOT EXISTS swipes (
   created_at INTEGER NOT NULL,
   PRIMARY KEY (member_id, tmdb_id)
 );
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INTEGER PRIMARY KEY,
+  member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  endpoint TEXT UNIQUE NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS push_subscriptions_member ON push_subscriptions(member_id);
