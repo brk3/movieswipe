@@ -9,15 +9,17 @@ on:
 jobs:
   docker:
     runs-on: docker
+    container: golang:1.26-bookworm
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.26'
-
       - name: Build binary
         run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o dist/movieswipe-linux-amd64 .
+
+      - name: Install docker CLI
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io
 
       - name: Build image
         run: docker build --build-arg TARGETARCH=amd64 -t forgejo.aiectomy.xyz/pbourke/movieswipe:latest .
