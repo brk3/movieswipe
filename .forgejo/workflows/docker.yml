@@ -10,23 +10,20 @@ jobs:
   docker:
     runs-on: docker
     container: golang:1.26-bookworm
+    env:
+      # Job containers run nested inside the runner's dind sidecar, so
+      # "localhost" doesn't reach it from in here - the bridge gateway does.
+      DOCKER_HOST: tcp://172.17.0.1:2375
     steps:
-      - name: Install git and docker CLI
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends git docker.io
-
-      - name: Checkout
-        run: git clone --depth 1 https://forgejo.aiectomy.xyz/pbourke/movieswipe.git .
+      - run: apt-get update && apt-get install -y --no-install-recommends git docker.io
+      - run: git clone ${{ github.server_url }}/${{ github.repository }} .
+      - run: git checkout ${{ github.sha }}
 
       - name: Build binary
         run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o dist/movieswipe-linux-amd64 .
 
-      - name: Build image
-        run: docker build --build-arg TARGETARCH=amd64 -t forgejo.aiectomy.xyz/pbourke/movieswipe:latest .
+      - run: |
+          echo "${{ secrets.REGISTRY_TOKEN }}" | docker login forgejo.aiectomy.xyz -u "${{ github.actor }}" --password-stdin
 
-      - name: Log in to Forgejo registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login forgejo.aiectomy.xyz -u pbourke --password-stdin
-
-      - name: Push image
-        run: docker push forgejo.aiectomy.xyz/pbourke/movieswipe:latest
+      - run: docker build --build-arg TARGETARCH=amd64 -t forgejo.aiectomy.xyz/pbourke/movieswipe:latest .
+      - run: docker push forgejo.aiectomy.xyz/pbourke/movieswipe:latest
