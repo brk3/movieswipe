@@ -603,6 +603,40 @@
     } catch (e) {}
   });
 
+  function resetOnboarding() {
+    state.joinCode = null;
+    state.displayName = '';
+    setOnboardingError(null);
+    $('input-name').value = '';
+    $('input-room-name').value = '';
+    $('input-code').value = '';
+    $('btn-continue-name').disabled = true;
+    hide('step-choice');
+    hide('step-create');
+    hide('step-join');
+    show('step-name');
+  }
+
+  function leaveRoom() {
+    clearSession();
+    state.room = null;
+    state.memberID = null;
+    state.buffer = [];
+    state.history = [];
+    state.activeTab = 'swipe';
+    $('btn-undo').disabled = true;
+    hide('lists-badge');
+    hide('swipe-banner');
+    hide('view-app');
+    resetOnboarding();
+    show('view-onboarding');
+  }
+
+  $('btn-leave-room').addEventListener('click', () => {
+    if (!confirm('Leave this room? You can rejoin later with the room code.')) return;
+    leaveRoom();
+  });
+
   $('btn-share').addEventListener('click', async () => {
     const url = `${location.origin}/?join=${state.code}`;
     if (navigator.share) {

@@ -121,6 +121,12 @@ input[type="text"]:focus {
   padding: 8px;
 }
 
+.btn-leave-room {
+  display: block;
+  margin: 24px auto 0;
+  color: var(--nope);
+}
+
 .error {
   color: var(--nope);
   font-size: 0.9rem;
