@@ -29,6 +29,7 @@ func New(d Deps) http.Handler {
 	mux.HandleFunc("POST /api/rooms", handleCreateRoom(d.Store))
 	mux.HandleFunc("POST /api/rooms/{code}/join", handleJoinRoom(d.Store))
 	mux.HandleFunc("GET /api/rooms/{code}", requireMember(d.Store, handleGetRoom(d.Store)))
+	mux.HandleFunc("DELETE /api/rooms/{code}/members/{memberID}", requireMember(d.Store, handleRemoveMember(d.Store)))
 	mux.HandleFunc("PATCH /api/rooms/{code}/filters", requireMember(d.Store, handleUpdateFilters(d.Store)))
 	mux.HandleFunc("GET /api/rooms/{code}/cards", requireMember(d.Store, handleCards(d.Store, d.Catalog, genresByID)))
 	mux.HandleFunc("POST /api/rooms/{code}/swipes", requireMember(d.Store, handleSwipe(d.Store, d.Push, d.Logger)))
