@@ -145,6 +145,8 @@ func (s *Store) AdvanceRoomCursor(ctx context.Context, roomID int64, cursor int,
 }
 
 func (s *Store) JoinRoom(ctx context.Context, roomID int64, name string) (*Member, error) {
+	name = strings.TrimSpace(name)
+
 	existing, err := s.memberByRoomAndName(ctx, roomID, name)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return nil, err
@@ -175,7 +177,8 @@ func (s *Store) JoinRoom(ctx context.Context, roomID int64, name string) (*Membe
 func (s *Store) memberByRoomAndName(ctx context.Context, roomID int64, name string) (*Member, error) {
 	var m Member
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, room_id, token, name, matches_seen_at, created_at FROM members WHERE room_id = ? AND name = ?`,
+		`SELECT id, room_id, token, name, matches_seen_at, created_at FROM members
+		 WHERE room_id = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?))`,
 		roomID, name,
 	).Scan(&m.ID, &m.RoomID, &m.Token, &m.Name, &m.MatchesSeenAt, &m.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -185,6 +188,29 @@ func (s *Store) memberByRoomAndName(ctx context.Context, roomID int64, name stri
 		return nil, err
 	}
 	return &m, nil
+}
+
+func (s *Store) MemberByID(ctx context.Context, id int64) (*Member, error) {
+	var m Member
+	err := s.db.QueryRowContext(ctx,
+		`SELECT id, room_id, token, name, matches_seen_at, created_at FROM members WHERE id = ?`,
+		id,
+	).Scan(&m.ID, &m.RoomID, &m.Token, &m.Name, &m.MatchesSeenAt, &m.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+// DeleteMember removes a member from a room, along with their swipes and
+// push subscriptions, so they no longer count toward what "everyone" needs
+// to like for a match.
+func (s *Store) DeleteMember(ctx context.Context, memberID int64) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM members WHERE id = ?`, memberID)
+	return err
 }
 
 func (s *Store) MemberByToken(ctx context.Context, token string) (*Member, error) {

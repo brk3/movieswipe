@@ -540,7 +540,30 @@
     list.innerHTML = '';
     (room.members || []).forEach((m) => {
       const li = document.createElement('li');
-      li.textContent = `${m.name} · ${m.swipe_count || 0} swiped`;
+      const label = document.createElement('span');
+      label.textContent = `${m.name} · ${m.swipe_count || 0} swiped`;
+      li.appendChild(label);
+      if (m.id !== state.memberID) {
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-remove-like';
+        removeBtn.type = 'button';
+        removeBtn.setAttribute('aria-label', `Remove ${m.name} from this room`);
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', async () => {
+          if (!confirm(`Remove ${m.name} from this room? Use this for stray or duplicate members blocking matches.`)) return;
+          removeBtn.disabled = true;
+          try {
+            await api(`/rooms/${state.code}/members/${m.id}`, { method: 'DELETE' });
+            const room = await api(`/rooms/${state.code}`);
+            state.room = room;
+            renderRoom(room);
+            loadLists();
+          } catch (e) {
+            removeBtn.disabled = false;
+          }
+        });
+        li.appendChild(removeBtn);
+      }
       list.appendChild(li);
     });
     populateFiltersFromRoom(room);
@@ -643,8 +666,11 @@
     show('view-onboarding');
   }
 
-  $('btn-leave-room').addEventListener('click', () => {
+  $('btn-leave-room').addEventListener('click', async () => {
     if (!confirm('Leave this room? You can rejoin later with the room code.')) return;
+    try {
+      await api(`/rooms/${state.code}/members/${state.memberID}`, { method: 'DELETE' });
+    } catch (e) {}
     leaveRoom();
   });
 

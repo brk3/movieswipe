@@ -3,11 +3,13 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/brk3/movieswipe/internal/store"
 )
 
 type memberDTO struct {
+	ID         int64  `json:"id"`
 	Name       string `json:"name"`
 	SwipeCount int    `json:"swipe_count"`
 }
@@ -32,7 +34,7 @@ func buildRoomView(st *store.Store, r *http.Request, room *store.Room, viewer *s
 		if err != nil {
 			return nil, err
 		}
-		dtos[i] = memberDTO{Name: m.Name, SwipeCount: count}
+		dtos[i] = memberDTO{ID: m.ID, Name: m.Name, SwipeCount: count}
 	}
 
 	unseen, err := st.UnseenMatchCount(r.Context(), room.ID, viewer.MatchesSeenAt)
@@ -128,6 +130,38 @@ func handleJoinRoom(st *store.Store) http.HandlerFunc {
 			"token": member.Token,
 			"room":  view,
 		})
+	}
+}
+
+// handleRemoveMember removes a member from the caller's room, e.g. a
+// duplicate created by rejoining under a different name, or the caller
+// themselves leaving. Removing a member also drops their swipes, so they
+// stop counting toward what "everyone" needs to like for a match.
+func handleRemoveMember(st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		mc := memberFromContext(r)
+
+		id, err := strconv.ParseInt(r.PathValue("memberID"), 10, 64)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid member id")
+			return
+		}
+
+		target, err := st.MemberByID(r.Context(), id)
+		if err != nil {
+			writeError(w, http.StatusNotFound, "member not found")
+			return
+		}
+		if target.RoomID != mc.Room.ID {
+			writeError(w, http.StatusForbidden, "member does not belong to this room")
+			return
+		}
+
+		if err := st.DeleteMember(r.Context(), id); err != nil {
+			writeError(w, http.StatusInternalServerError, "could not remove member")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
