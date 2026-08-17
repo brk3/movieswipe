@@ -23,6 +23,7 @@ jobs:
   build-push:
     needs: test
     runs-on: docker
+    container: golang:1.26-bookworm
     env:
       # Job containers run nested inside the runner's dind sidecar, so
       # "localhost" doesn't reach it from in here - the bridge gateway does.
