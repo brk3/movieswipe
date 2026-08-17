@@ -1,15 +1,28 @@
-name: Docker Build
+name: release
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  docker:
+  test:
     runs-on: docker
     container: golang:1.26-bookworm
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends git
+      - run: git clone ${{ github.server_url }}/${{ github.repository }} .
+      - run: git checkout ${{ github.sha }}
+      - run: go vet ./...
+      - run: go test -cover ./...
+
+  build-push:
+    needs: test
+    runs-on: docker
     env:
       # Job containers run nested inside the runner's dind sidecar, so
       # "localhost" doesn't reach it from in here - the bridge gateway does.
@@ -25,5 +38,5 @@ jobs:
       - run: |
           echo "${{ secrets.REGISTRY_TOKEN }}" | docker login forgejo.aiectomy.xyz -u "${{ github.actor }}" --password-stdin
 
-      - run: docker build --build-arg TARGETARCH=amd64 -t forgejo.aiectomy.xyz/pbourke/movieswipe:latest .
-      - run: docker push forgejo.aiectomy.xyz/pbourke/movieswipe:latest
+      - run: docker build --build-arg TARGETARCH=amd64 -t forgejo.aiectomy.xyz/pbourke/movieswipe:${{ github.ref_name }} .
+      - run: docker push forgejo.aiectomy.xyz/pbourke/movieswipe:${{ github.ref_name }}
