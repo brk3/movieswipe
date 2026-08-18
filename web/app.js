@@ -199,13 +199,13 @@
     hide('empty-state');
     const visible = state.buffer.slice(0, 2);
     for (let i = visible.length - 1; i >= 0; i--) {
-      const el = buildCardElement(visible[i], i === 0);
+      const el = buildCardElement(visible[i], i === 0, commitSwipe);
       if (i === 1) el.classList.add('card-peek');
       stack.appendChild(el);
     }
   }
 
-  function buildCardElement(movie, isTop) {
+  function buildCardElement(movie, isTop, onCommit) {
     const card = document.createElement('div');
     card.className = 'card';
 
@@ -293,7 +293,7 @@
       nopeBadge.textContent = 'NOPE';
       card.appendChild(likeBadge);
       card.appendChild(nopeBadge);
-      attachDrag(card, movie);
+      attachDrag(card, movie, onCommit);
     }
 
     return card;
@@ -306,7 +306,7 @@
     return pill;
   }
 
-  function attachDrag(cardEl, movie) {
+  function attachDrag(cardEl, movie, onCommit) {
     let dragging = false;
     let startX = 0;
     let startY = 0;
@@ -359,7 +359,7 @@
       const threshold = window.innerWidth * 0.35;
       const fast = Math.abs(velocity) > 0.8 && Math.abs(dx) > 80;
       if (Math.abs(dx) > threshold || fast) {
-        commitSwipe(cardEl, movie, dx > 0, dy);
+        onCommit(cardEl, movie, dx > 0, dy);
       } else {
         cardEl.style.transition = 'transform 0.2s ease-out';
         cardEl.style.transform = '';
@@ -488,7 +488,7 @@
   function renderLists(data) {
     const matchesEl = $('matches-list');
     matchesEl.innerHTML = '';
-    (data.matches || []).forEach((m) => matchesEl.appendChild(buildListItem(m)));
+    (data.matches || []).forEach((m) => matchesEl.appendChild(buildListItem(m, false, true)));
 
     const membersEl = $('members-lists');
     membersEl.innerHTML = '';
@@ -501,13 +501,13 @@
       const list = document.createElement('div');
       list.className = 'movie-list';
       const isMine = member.id === state.memberID;
-      (member.likes || []).forEach((m) => list.appendChild(buildListItem(m, isMine)));
+      (member.likes || []).forEach((m) => list.appendChild(buildListItem(m, isMine, isMine)));
       section.appendChild(list);
       membersEl.appendChild(section);
     });
   }
 
-  function buildListItem(movie, removable) {
+  function buildListItem(movie, removable, redecidable) {
     const item = document.createElement('div');
     item.className = 'list-item';
     if (movie.poster_path) {
@@ -527,7 +527,8 @@
       removeBtn.type = 'button';
       removeBtn.setAttribute('aria-label', `Remove ${movie.title} from your likes`);
       removeBtn.textContent = '×';
-      removeBtn.addEventListener('click', async () => {
+      removeBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         removeBtn.disabled = true;
         try {
           await api(`/rooms/${state.code}/swipes/${movie.tmdb_id}`, { method: 'DELETE' });
@@ -539,8 +540,53 @@
       item.appendChild(removeBtn);
     }
 
+    if (redecidable) {
+      item.classList.add('list-item-tappable');
+      item.addEventListener('click', () => openCardModal(movie));
+    }
+
     return item;
   }
+
+  let modalMovie = null;
+
+  function openCardModal(movie) {
+    modalMovie = movie;
+    const modalStack = $('card-modal-stack');
+    modalStack.querySelectorAll('.card').forEach((el) => el.remove());
+    modalStack.appendChild(buildCardElement(movie, true, commitModalSwipe));
+    show('card-modal');
+  }
+
+  function closeCardModal() {
+    hide('card-modal');
+    modalMovie = null;
+    $('card-modal-stack').querySelectorAll('.card').forEach((el) => el.remove());
+  }
+
+  function commitModalSwipe(cardEl, movie, liked, dy) {
+    const flyX = (liked ? 1 : -1) * window.innerWidth * 1.2;
+    cardEl.style.transition = 'transform 0.3s ease-out';
+    cardEl.style.transform = `translate(${flyX}px, ${dy || 0}px) rotate(${liked ? 20 : -20}deg)`;
+    submitSwipe(movie.tmdb_id, liked);
+    setTimeout(() => {
+      closeCardModal();
+      if (state.activeTab === 'lists') loadLists();
+    }, 300);
+  }
+
+  $('btn-close-card-modal').addEventListener('click', closeCardModal);
+  document.querySelector('#card-modal .modal-backdrop').addEventListener('click', closeCardModal);
+
+  $('modal-btn-pass').addEventListener('click', () => {
+    const cardEl = $('card-modal-stack').querySelector('.card');
+    if (cardEl && modalMovie) commitModalSwipe(cardEl, modalMovie, false, 0);
+  });
+
+  $('modal-btn-like').addEventListener('click', () => {
+    const cardEl = $('card-modal-stack').querySelector('.card');
+    if (cardEl && modalMovie) commitModalSwipe(cardEl, modalMovie, true, 0);
+  });
 
   function renderRoom(room) {
     if (!room) return;

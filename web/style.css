@@ -600,3 +600,27 @@ input[type="text"]:focus {
   border: none;
   border-radius: 8px;
 }
+
+#trailer-modal {
+  z-index: 110;
+}
+
+.modal-card-content {
+  display: flex;
+  flex-direction: column;
+  height: 85dvh;
+  max-height: 720px;
+}
+
+.modal-card-stack {
+  flex: 1;
+  min-height: 0;
+}
+
+.list-item-tappable {
+  cursor: pointer;
+}
+
+.list-item-tappable:active {
+  background: var(--surface-2);
+}
