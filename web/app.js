@@ -357,7 +357,7 @@
       dragging = false;
       cardEl.classList.remove('dragging');
       const threshold = window.innerWidth * 0.35;
-      const fast = Math.abs(velocity) > 0.5 && Math.abs(dx) > 20;
+      const fast = Math.abs(velocity) > 0.8 && Math.abs(dx) > 80;
       if (Math.abs(dx) > threshold || fast) {
         commitSwipe(cardEl, movie, dx > 0, dy);
       } else {
@@ -391,11 +391,18 @@
     });
   }
 
+  let swipeBusy = false;
+
   function commitSwipe(cardEl, movie, liked, dy) {
+    if (swipeBusy) return;
+    swipeBusy = true;
     const flyX = (liked ? 1 : -1) * window.innerWidth * 1.2;
     cardEl.style.transition = 'transform 0.3s ease-out';
     cardEl.style.transform = `translate(${flyX}px, ${dy || 0}px) rotate(${liked ? 20 : -20}deg)`;
-    setTimeout(() => cardEl.remove(), 300);
+    setTimeout(() => {
+      cardEl.remove();
+      swipeBusy = false;
+    }, 300);
 
     state.history.push(movie);
     if (state.history.length > 20) state.history.shift();
@@ -431,7 +438,10 @@
   async function refillBuffer() {
     try {
       const cards = await api(`/rooms/${state.code}/cards?limit=10`);
-      const existingIds = new Set(state.buffer.map((m) => m.tmdb_id));
+      const existingIds = new Set([
+        ...state.buffer.map((m) => m.tmdb_id),
+        ...state.history.map((m) => m.tmdb_id),
+      ]);
       cards.forEach((c) => {
         if (!existingIds.has(c.tmdb_id)) state.buffer.push(c);
       });
