@@ -168,8 +168,40 @@ func TestEnsureCardsAppliesDefaultMinVotes(t *testing.T) {
 	if err := cat.EnsureCards(ctx, room, member.ID, 3); err != nil {
 		t.Fatal(err)
 	}
-	if gotMinVotes != "50" {
-		t.Fatalf("vote_count.gte = %q, want %q", gotMinVotes, "50")
+	if gotMinVotes != "100" {
+		t.Fatalf("vote_count.gte = %q, want %q", gotMinVotes, "100")
+	}
+}
+
+func TestEnsureCardsAppliesDefaultMinRating(t *testing.T) {
+	ctx := context.Background()
+	st := newTestStore(t)
+
+	var gotMinRating string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMinRating = r.URL.Query().Get("vote_average.gte")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(discoverPage(1, 1, 2, 3)))
+	}))
+	defer srv.Close()
+
+	tmdbClient := tmdb.NewWithBaseURL("test-token", srv.URL)
+	cat := New(tmdbClient, nil, st)
+
+	room, err := st.CreateRoom(ctx, "test", `{}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	member, err := st.JoinRoom(ctx, room.ID, "Alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cat.EnsureCards(ctx, room, member.ID, 3); err != nil {
+		t.Fatal(err)
+	}
+	if gotMinRating != "5.0" {
+		t.Fatalf("vote_average.gte = %q, want %q", gotMinRating, "5.0")
 	}
 }
 
